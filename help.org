@@ -1,0 +1,9 @@
+* M-x slime maakt inferior lisp die niet bij gnuplot komt
+
+- maak een shell
+- sbcl
+  - (load "/home/kris/.emacs.d/elpa/slime-20250210.1149/swank-loader.lisp")
+  - (swank-loader:init)
+  - (swank:create-server)
+- M-x slime-connect
+
