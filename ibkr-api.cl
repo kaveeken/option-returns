@@ -1,17 +1,8 @@
-; "https://api.ibkr.com/v1/api/iserver/marketdata/history?conid=265598&exchange=SMART&period=1d&bar=1h&startTime=20230821-13:30:00&outsideRth=true"
 (ql:quickload :drakma)
-(print (drakma:http-request "http://lisp.org"))
-(print (drakma:http-request "https://api.ibkr.com/v1/api/iserver/marketdata/history?conid=265598&exchange=SMART&period=1d&bar=1h&startTime=20230821-13:30:00&outsideRth=true" :method :get))
-curl --url {{baseUrl}}/iserver/marketdata/snapshot?conids=265598,8314&fields=31,84,86 --request GET
-
-(defparameter *return-body* "")
-(setq *return-body* (drakma:http-request "https://localhost:5000/v1/api/iserver/marketdata/history?conid=265598&exchange=SMART&period=1d&bar=1d&startTime=20230821-13:30:00&outsideRth=true"))
-
 (ql:quickload :flexi-streams)
-(print (flexi-streams:octets-to-string *return-body*))
 (ql:quickload :st-json)
-(st-json:getjso "serverId" (st-json:read-json (flexi-streams:octets-to-string *return-body*)))
-(print (car (st-json:getjso "data" (st-json:read-json (flexi-streams:octets-to-string *return-body*)))))
+
+(load "classes.cl")
 
 (defun read-body (body)
   (st-json:read-json
@@ -21,13 +12,6 @@ curl --url {{baseUrl}}/iserver/marketdata/snapshot?conids=265598,8314&fields=31,
   (let ((base-url "https://localhost:5000/v1/api/iserver/"))
     (read-body (drakma:http-request (concatenate 'string base-url endpoint)))))
 
-(defun test-snapshot ()
-  (get-request "marketdata/snapshot?conids=265598,8314&fields=31,84,86"))
-
-(print (test-snapshot))
-
-(defparameter *exchange* "NASDAQ")
-
 (defun find-conid (symbol)
   (let ((contracts (get-request (format nil "secdef/search?symbol=~a&name=false&secType=STK" symbol))))
     (st-json:getjso "conid" (car contracts))))
@@ -36,29 +20,64 @@ curl --url {{baseUrl}}/iserver/marketdata/snapshot?conids=265598,8314&fields=31,
     ;;               (search *exchange* (st-json:getjso "companyHeader" contract)))
     ;;         return (st-json:getjso "conid" contract))))
 
-(defparameter *exchange-list* '("NASDAQ" "NYSE"))
-
-(print (find-conid "ASML"))
-
 (defun get-history (conid period bar)
   (get-request
-  ;(print
    (format nil "marketdata/history?conid=~a&exchange=SMART&period=~a&bar=~a" conid period bar)))
-
-(print (get-history (find-conid "ASML") "5y" "1m"))
-
-(print 
- (get-request
-   "marketdata/history?conid=117902840&exchange=SMART"))
 
 (defun get-closes (history)
   (let ((data (st-json:getjso "data" history)))
     (mapcar (lambda (ohlc) (st-json:getjso "c" ohlc)) data)))
 
-(print (get-closes (get-history (find-conid "ASML") "5y" "1m")))
+(defun get-contract-by-symbol (symbol)
+  (car (get-request (format nil "secdef/search?symbol=~a" symbol))))
 
-(print (geometric-diffs (get-closes (get-history (find-conid "ASML") "12y" "1m")) 3))
+(defun get-stock (symbol)
+  (let* ((contract (get-contract-by-symbol symbol))
+         (conid (st-json:getjso "conid" contract))
+         (last (st-json:getjso "31" (get-market-snapshot conid))))
+    (make-instance
+     'stock :conid conid :price last
+            :months (loop for section in (st-json:getjso "sections" contract)
+                          if (string-equal (st-json:getjso "secType" section) "OPT")
+                            return (st-json:getjso "months" section)))))
 
+(defun get-option-chain-strikes (conid month)
+  (let* ((all (get-request (format nil "secdef/strikes?conid=~a&sectype=OPT&month=~a" conid month)))
+         (call-strike-prices (st-json:getjso "call" all))
+         (put-strike-prices (st-json:getjso "put" all)))
+    (cons call-strike-prices put-strike-prices)))
+
+(defun get-option-conid (underlying-conid month strike right)
+  (let* ((contract-info (car (get-request
+                 (format nil "secdef/info?conid=~a&secType=OPT&month=~a&strike=~a&right=~a"
+                         underlying-conid month strike right))))
+         (contract-conid (st-json:getjso "conid" contract-info)))
+    contract-conid))
+
+(defun get-option (underlying-conid month strike right)
+  (let* ((option-conid (get-option-conid underlying-conid month strike right))
+         (snapshot (car (get-request (format nil "marketdata/snapshot?conids=~a&fields=84,86" option-conid))))
+         (bid (st-json:getjso "84" snapshot))
+         (ask (st-json:getjso "86" snapshot)))
+    (make-instance 'option-contract :conid option-conid :strike strike :right right :bid bid :ask ask)))
+
+(defun get-option-chain-row (underlying-conid month strike call-strikes put-strikes)
+  (let* ((call (if (member strike call-strikes)
+                   (get-option underlying-conid month strike "C")
+                   nil))
+         (put (if (member strike put-strikes)
+                   (get-option underlying-conid month strike "P")
+                   nil)))
+    (make-instance 'option-chain-row :strike strike :call call :put put)))
+
+(defun get-option-chain (stock month)
+  (let* ((strike-prices (get-option-chain-strikes (conid stock) month))
+         (call-strikes (car strike-prices))
+         (put-strikes (cdr strike-prices))
+         (rows (loop for strike in (union call-strikes put-strikes)
+                     collect (get-option-chain-row
+                              (conid stock) month strike call-strikes put-strikes))))
+    (make-instance 'option-chain :underlying stock :month month :rows rows)))
 
 (defun option-chain-instantiate-get-months (symbol)
   (let* ((contracts (get-request (format nil "secdef/search?symbol=~a" symbol)))
@@ -72,8 +91,6 @@ curl --url {{baseUrl}}/iserver/marketdata/snapshot?conids=265598,8314&fields=31,
 
 (print (option-chain-instantiate-get-months "GIS"))
 
-(defun option-chain-find-strikes (conid month)
-  (get-request (format nil "secdef/strikes?conid=~a&sectype=OPT&month=~a" conid month)))
 
 (print (option-chain-find-strikes "7616" "NOV25"))
 
