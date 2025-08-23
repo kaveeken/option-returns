@@ -40,7 +40,7 @@
 (defun get-stock (symbol)
   (let* ((contract (get-contract-by-symbol symbol))
          (conid (st-json:getjso "conid" contract))
-         (last (st-json:getjso "31" (car (get-market-snapshot conid)))))
+         (last (read-from-string (st-json:getjso "31" (car (get-market-snapshot conid))))))
     (make-instance
      'stock :conid conid :price last
             :months (loop for section in (st-json:getjso "sections" contract)
@@ -65,7 +65,9 @@
          (snapshot (car (get-request (format nil "marketdata/snapshot?conids=~a&fields=84,86" option-conid))))
          (bid (st-json:getjso "84" snapshot))
          (ask (st-json:getjso "86" snapshot)))
-    (make-instance 'option-contract :conid option-conid :strike strike :right right :bid bid :ask ask)))
+    (make-instance 'option-contract :conid option-conid :strike strike :right right
+                                    :bid (if bid (read-from-string bid) nil)
+                                    :ask (if ask (read-from-string ask) nil))))
 
 (defun get-option-chain-row (underlying-conid month strike call-strikes put-strikes)
   (let* ((call (if (member strike call-strikes)
@@ -84,6 +86,4 @@
                      collect (get-option-chain-row
                               (conid stock) month strike call-strikes put-strikes))))
     (make-instance 'option-chain :underlying stock :month month :rows rows)))
-
-(defparameter *example-chain* (get-option-chain (get-stock "GIS") "NOV25"))
 
