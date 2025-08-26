@@ -34,17 +34,23 @@
 (defun geometric-diffs (closes &optional (period 1))
   (mapcar (lambda (first second) (/ second first)) (butlast closes period) (last closes (- (length closes) period))))
 
-(defun geometric-walk (diffs count)
+(defun geometric-walk (diffs steps)
   (let* ((len (length diffs))
-         (indices (loop for i from 0 to count collect (random len))) ;; wasteful but no real problem. maybe look at streams
+         (indices (loop for i from 0 to steps collect (random len))) ;; wasteful but no real problem. maybe look at streams
          (samples (mapcar #'(lambda (n) (nth n diffs)) indices)))
   (reduce #'* samples)))
 
-(defun bootstrap (diffs tau n)
-  (loop for i from 0 to n collect (geometric-walk diffs tau)))
+(defun bootstrap (diffs steps n)
+  (loop for i from 0 to n collect (geometric-walk diffs steps)))
   
-(defun generate-bootstrap (closes tau n)
-  (bootstrap (geometric-diffs closes) tau n))
+(defun generate-bootstrap (closes steps n)
+  (bootstrap (geometric-diffs closes) steps n))
+
+(defun make-histogram-data-from-bootstrap (closes bin-count steps n) ;; scale?
+  (bin-list (generate-bootstrap closes steps n) bin-count))
+
+(defun make-histogram-data-directly (closes bin-count &optional (period 1))
+  (bin-list (geometric-diffs closes period) bin-count))
 
 (defun generate-histogram-plot-function-from-closes
     (closes bin-count &optional (period 1) (bootstrap-tau nil) (bootstrap-n nil) (price 1))
