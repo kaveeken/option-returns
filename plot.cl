@@ -32,48 +32,48 @@
     (loop for fn in plot-functions do (funcall fn))))
   
 
-(plot-histogram-overlaid-line "plot.png"
-                              (generate-histogram-plot-function-from-closes
-                               (get-closes (get-history (find-conid "GIS") "12y" "1w"))
-                               50 3 0 10000 500)
-                              (lambda () nil))
-
-(let* ((weeks-to-expiry 12) ; tau
-       (closes (get-closes (get-history (find-conid "GIS") "12y" "1w")))
-       (diffs (generate-bootstrap closes weeks-to-expiry 1000))
-       (scaled-diffs (mapcar (lambda (diff) (* (car (last closes)) diff)) diffs)))
-  (plot-histogram-and-lines
-   "plot.png"
-   (list
-    (generate-histogram-plot-function scaled-diffs 50))))
-
-(let* ((weeks-to-expiry 12) ; tau
-       (bin-count 50)
-       (closes (get-closes (get-history (find-conid "GIS") "12y" "1w")))
-       (diffs (geometric-diffs closes weeks-to-expiry))
-       (scaled-diffs (mapcar (lambda (diff) (* (car (last closes)) diff)) diffs))
-       (xmin (reduce #'min scaled-diffs))
-       (xmax (reduce #'max scaled-diffs))
-       (dx (/ (- xmax xmin) bin-count))
-       (returns (loop for x from xmin to xmax by dx
-                      collect (format nil "~a ~a~%" x (option-position-return *example-option-position* x)))))
-  (plot-histogram-and-lines
-   "plot.png"
-   (list
-    (generate-histogram-plot-function scaled-diffs 50)
-    (generate-hline-function xmin xmax 0)
-    (generate-vline-function 50 -10 10)
-    (lambda ()
-      (plot (lambda () (loop for return in returns do (format t "~a" return)))
-        :with :lines :axes :x1y2 :lw 2 :title "Return")))))
-
-(setq *example-option-position*
-  (make-instance 'option-position
-    :bought-contracts 
-      (list (make-instance 'call :price 0.25 :date '(2025 11 15) :strike-price 65.0)
-            (make-instance 'put :price 0.55 :date '(2025 11 15) :strike-price 42.5))
-    :written-contracts 
-      (list (make-instance 'call :price 1.45 :date '(2025 11 15) :strike-price 52.5))
-            ;(make-instance 'put :price 3.75 :date '(2025 11 15) :strike-price 80.0))
-    :underlying-lots 0
-    :underlying-cost 50.0))
+;; (plot-histogram-overlaid-line "plot.png"
+;;                               (generate-histogram-plot-function-from-closes
+;;                                (get-closes (get-history (find-conid "GIS") "12y" "1w"))
+;;                                50 3 0 10000 500)
+;;                               (lambda () nil))
+;; 
+;; (let* ((weeks-to-expiry 12) ; tau
+;;        (closes (get-closes (get-history (find-conid "GIS") "12y" "1w")))
+;;        (diffs (generate-bootstrap closes weeks-to-expiry 1000))
+;;        (scaled-diffs (mapcar (lambda (diff) (* (car (last closes)) diff)) diffs)))
+;;   (plot-histogram-and-lines
+;;    "plot.png"
+;;    (list
+;;     (generate-histogram-plot-function scaled-diffs 50))))
+;; 
+;; (let* ((weeks-to-expiry 12) ; steps
+;;        (bin-count 50)
+;;        (closes (get-closes (get-history (find-conid "GIS") "12y" "1w")))
+;;        (diffs (geometric-diffs closes weeks-to-expiry))
+;;        (scaled-diffs (mapcar (lambda (diff) (* (car (last closes)) diff)) diffs))
+;;        (xmin (reduce #'min scaled-diffs))
+;;        (xmax (reduce #'max scaled-diffs))
+;;        (dx (/ (- xmax xmin) bin-count))
+;;        (returns (loop for x from xmin to xmax by dx
+;;                       collect (format nil "~a ~a~%" x (funcall (generate-return-function *example-chain*) x)))))
+;;   (plot-histogram-and-lines
+;;    "plot.png"
+;;    (list
+;;     (generate-histogram-plot-function scaled-diffs 50)
+;;     (generate-hline-function xmin xmax 0)
+;;     (generate-vline-function 50 -10 10)
+;;     (lambda ()
+;;       (plot (lambda () (loop for return in returns do (format t "~a" return)))
+;;         :with :lines :axes :x1y2 :lw 4 :title "Return")))))
+;; 
+;; (setq *example-option-position*
+;;   (make-instance 'option-position
+;;     :bought-contracts 
+;;       (list (make-instance 'call :price 0.25 :date '(2025 11 15) :strike-price 65.0)
+;;             (make-instance 'put :price 0.55 :date '(2025 11 15) :strike-price 42.5))
+;;     :written-contracts 
+;;       (list (make-instance 'call :price 1.45 :date '(2025 11 15) :strike-price 52.5))
+;;             ;(make-instance 'put :price 3.75 :date '(2025 11 15) :strike-price 80.0))
+;;     :underlying-lots 0
+;;     :underlying-cost 50.0))

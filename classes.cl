@@ -117,21 +117,21 @@
       (lambda (price) (max 0 (- price (strike-price object))))
       (lambda (price) (max 0 (- (strike-price object) price)))))
 
-(setq *test-row*
-  (make-instance
-   'option-chain-row
-   :strike 40.0
-   :call (make-instance 'option-contract
-                        :conid "1234"
-                        :strike 40.0
-                        :right "C"
-                        :bid 9.60
-                        :ask 10.50)
-   :call-position -1
-   :put (make-instance 'option-contract
-                       :conid "1235"
-                       :strike 40.0
-                       :right "P"
-                       :bid 0.25
-                       :ask 0.35)
-   :put-position 1))
+;; (setq *test-row*
+;;   (make-instance
+;;    'option-chain-row
+;;    :strike 40.0
+;;    :call (make-instance 'option-contract
+;;                         :conid "1234"
+;;                         :strike 40.0
+;;                         :right "C"
+;;                         :bid 9.60
+;;                         :ask 10.50)
+;;    :call-position -1
+;;    :put (make-instance 'option-contract
+;;                        :conid "1235"
+;;                        :strike 40.0
+;;                        :right "P"
+;;                        :bid 0.25
+;;                        :ask 0.35)
+;;    :put-position 1))

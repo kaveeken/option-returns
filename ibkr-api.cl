@@ -34,8 +34,6 @@
 
 (defun get-contract-by-symbol (symbol)
   (car (get-request (format nil "secdef/search?symbol=~a" symbol))))
-(get-contract-by-symbol "GIS")
-(get-stock "GIS")
 
 (defun get-stock (symbol)
   (let* ((contract (get-contract-by-symbol symbol))

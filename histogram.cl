@@ -103,8 +103,8 @@
 ;; (plot-histogram (bootstrap (geometric-diffs (get-closes (get-history (find-conid "GIS") "12y" "1m"))) 12 10000) 50 "images/histogram-stacked-plot.png")
 ;; 
 ;; 
-(plot-histogram
- (generate-bootstrap
-  (get-closes (get-history (find-conid "GIS") "12y" "1m"))
-  1 10000)
- 50 "images/histogram-stacked-plot.png")
+;; (plot-histogram
+;;  (generate-bootstrap
+;;   (get-closes (get-history (find-conid "GIS") "12y" "1m"))
+;;   1 10000)
+;;  50 "images/histogram-stacked-plot.png")
